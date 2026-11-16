@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
-  Tractor, User, Mail, Lock, Phone, Image as ImageIcon, 
+  Tractor, User, Mail, Lock, Image as ImageIcon, 
   Eye, EyeOff, X, ShieldCheck, AlertCircle, Loader2, CheckCircle2 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
-  Tractor, Package, DollarSign, Plus, Search, Edit3, Trash2, 
+  Tractor, DollarSign, Plus, Trash2, 
   Loader2, CheckCircle2, AlertCircle, ShoppingBag 
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -16,6 +16,14 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 
+// Initial seed products for demo fallback
+const defaultInventory = [
+  { id: "seed-1", cropName: "Desi Vine Tomatoes", batch: "Batch #VN-2025-08", pricePerUnit: 38, marketPrice: 55, quantity: 320, unit: "kg", harvestDate: "Today 6:00 AM", status: "In Stock", farmerId: "demo" },
+  { id: "seed-2", cropName: "Shimla Green Capsicum", batch: "Batch #SH-2025-02", pricePerUnit: 65, marketPrice: 90, quantity: 140, unit: "kg", harvestDate: "Yesterday", status: "Selling Fast", farmerId: "demo" },
+  { id: "seed-3", cropName: "Baby Spinach (Palak)", batch: "Batch #PL-2025-11", pricePerUnit: 25, marketPrice: 45, quantity: 85, unit: "bdl", harvestDate: "Today", status: "Re-stock needed", farmerId: "demo" },
+  { id: "seed-4", cropName: "Nagpur Sweet Oranges", batch: "Batch #NG-2025-01", pricePerUnit: 90, marketPrice: 120, quantity: 450, unit: "kg", harvestDate: "2 days ago", status: "Ample Stock", farmerId: "demo" }
+];
+
 export default function FarmerDashboard({ onNavigate }) {
   const { currentUser, userData, logout } = useAuth();
 
@@ -23,9 +31,9 @@ export default function FarmerDashboard({ onNavigate }) {
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'inventory' | 'orders'
 
   // Listings state
-  const [listings, setListings] = useState([]);
+  const [listings, setListings] = useState(defaultInventory);
   const [farmerOrders, setFarmerOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [actionMessage, setActionMessage] = useState(null);
 
@@ -37,21 +45,12 @@ export default function FarmerDashboard({ onNavigate }) {
   const [quantity, setQuantity] = useState('350');
   const [unit, setUnit] = useState('kg');
 
-  // Initial seed products for demo fallback
-  const defaultInventory = [
-    { id: "seed-1", cropName: "Desi Vine Tomatoes", batch: "Batch #VN-2025-08", pricePerUnit: 38, marketPrice: 55, quantity: 320, unit: "kg", harvestDate: "Today 6:00 AM", status: "In Stock", farmerId: currentUser?.uid || "demo" },
-    { id: "seed-2", cropName: "Shimla Green Capsicum", batch: "Batch #SH-2025-02", pricePerUnit: 65, marketPrice: 90, quantity: 140, unit: "kg", harvestDate: "Yesterday", status: "Selling Fast", farmerId: currentUser?.uid || "demo" },
-    { id: "seed-3", cropName: "Baby Spinach (Palak)", batch: "Batch #PL-2025-11", pricePerUnit: 25, marketPrice: 45, quantity: 85, unit: "bdl", harvestDate: "Today", status: "Re-stock needed", farmerId: currentUser?.uid || "demo" },
-    { id: "seed-4", cropName: "Nagpur Sweet Oranges", batch: "Batch #NG-2025-01", pricePerUnit: 90, marketPrice: 120, quantity: 450, unit: "kg", harvestDate: "2 days ago", status: "Ample Stock", farmerId: currentUser?.uid || "demo" }
-  ];
-
   // Real-time listener for Farmer's products
   useEffect(() => {
     let unsubscribeProducts = () => {};
     let unsubscribeOrders = () => {};
 
     try {
-      // Products query
       const currentFarmerId = currentUser?.uid;
       let prodQuery;
 
@@ -63,15 +62,12 @@ export default function FarmerDashboard({ onNavigate }) {
 
       unsubscribeProducts = onSnapshot(prodQuery, (snapshot) => {
         if (!snapshot.empty) {
-          const prods = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const prods = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
           setListings(prods);
-        } else {
-          setListings(defaultInventory);
         }
         setLoading(false);
       }, (err) => {
         console.warn("Firestore products fetch failed (using fallback items):", err);
-        setListings(defaultInventory);
         setLoading(false);
       });
 
@@ -79,7 +75,7 @@ export default function FarmerDashboard({ onNavigate }) {
       if (currentFarmerId) {
         const orderQuery = query(collection(db, "orders"), where("farmerIds", "array-contains", currentFarmerId));
         unsubscribeOrders = onSnapshot(orderQuery, (snapshot) => {
-          const orders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
           setFarmerOrders(orders);
         }, (err) => {
           console.warn("Orders fetch failed or index building:", err);
@@ -88,8 +84,6 @@ export default function FarmerDashboard({ onNavigate }) {
 
     } catch (e) {
       console.warn("Error setting up listeners:", e);
-      setListings(defaultInventory);
-      setLoading(false);
     }
 
     return () => {
