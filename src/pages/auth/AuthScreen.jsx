@@ -123,6 +123,8 @@ export default function AuthScreen({ onNavigate }) {
         msg = 'Invalid email or password.';
       } else if (err.code === 'auth/weak-password') {
         msg = 'Password is too weak. Please use at least 6 characters.';
+      } else if (err.code === 'auth/operation-not-allowed') {
+        msg = 'Email/password authentication is disabled for this Firebase project. Enable Email/Password in Firebase Console under Authentication > Sign-in method.';
       } else if (err.code === 'auth/api-key-not-valid' || msg.includes('API key')) {
         msg = 'Firebase API key is not configured in .env. You can use the demo links below to inspect all portals!';
       }
