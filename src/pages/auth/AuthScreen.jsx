@@ -14,7 +14,7 @@ export default function AuthScreen({ onNavigate }) {
   // Controlled form state
   const [name, setName] = useState('Ramesh Patel');
   const [phone, setPhone] = useState('(555) 234-5678');
-  const [email, setEmail] = useState('ramesh.patel@farmconnect.com');
+  const [email, setEmail] = useState('farmer.ramesh@farmconnect.com');
   const [password, setPassword] = useState('FarmerPass123!');
   const [showPassword, setShowPassword] = useState(false);
   
