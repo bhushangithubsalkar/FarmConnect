@@ -16,24 +16,16 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 
-// Initial seed products for demo fallback
-const defaultInventory = [
-  { id: "seed-1", cropName: "Desi Vine Tomatoes", batch: "Batch #VN-2025-08", pricePerUnit: 38, marketPrice: 55, quantity: 320, unit: "kg", harvestDate: "Today 6:00 AM", status: "In Stock", farmerId: "demo" },
-  { id: "seed-2", cropName: "Shimla Green Capsicum", batch: "Batch #SH-2025-02", pricePerUnit: 65, marketPrice: 90, quantity: 140, unit: "kg", harvestDate: "Yesterday", status: "Selling Fast", farmerId: "demo" },
-  { id: "seed-3", cropName: "Baby Spinach (Palak)", batch: "Batch #PL-2025-11", pricePerUnit: 25, marketPrice: 45, quantity: 85, unit: "bdl", harvestDate: "Today", status: "Re-stock needed", farmerId: "demo" },
-  { id: "seed-4", cropName: "Nagpur Sweet Oranges", batch: "Batch #NG-2025-01", pricePerUnit: 90, marketPrice: 120, quantity: 450, unit: "kg", harvestDate: "2 days ago", status: "Ample Stock", farmerId: "demo" }
-];
-
 export default function FarmerDashboard({ onNavigate }) {
   const { currentUser, userData, logout } = useAuth();
 
   // Active navigation tab
   const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'inventory' | 'orders'
 
-  // Listings state
-  const [listings, setListings] = useState(defaultInventory);
+  // Listings state - strictly scoped to authenticated farmer
+  const [listings, setListings] = useState([]);
   const [farmerOrders, setFarmerOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [actionMessage, setActionMessage] = useState(null);
 
@@ -45,45 +37,52 @@ export default function FarmerDashboard({ onNavigate }) {
   const [quantity, setQuantity] = useState('350');
   const [unit, setUnit] = useState('kg');
 
-  // Real-time listener for Farmer's products
+  // Real-time listener strictly scoped to authenticated farmer's UID
   useEffect(() => {
     let unsubscribeProducts = () => {};
     let unsubscribeOrders = () => {};
 
-    try {
-      const currentFarmerId = currentUser?.uid;
-      let prodQuery;
+    if (!currentUser?.uid) {
+      setListings([]);
+      setFarmerOrders([]);
+      setLoading(false);
+      return;
+    }
 
-      if (currentFarmerId) {
-        prodQuery = query(collection(db, "products"), where("farmerId", "==", currentFarmerId));
-      } else {
-        prodQuery = collection(db, "products");
-      }
+    try {
+      const currentFarmerId = currentUser.uid;
+
+      // STRICT ISOLATION: Only query products belonging to this farmer
+      const prodQuery = query(
+        collection(db, "products"), 
+        where("farmerId", "==", currentFarmerId)
+      );
 
       unsubscribeProducts = onSnapshot(prodQuery, (snapshot) => {
-        if (!snapshot.empty) {
-          const prods = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-          setListings(prods);
-        }
+        const prods = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setListings(prods);
         setLoading(false);
       }, (err) => {
-        console.warn("Firestore products fetch failed (using fallback items):", err);
+        console.warn("Firestore products fetch failed:", err);
         setLoading(false);
       });
 
-      // Orders query with multi-vendor farmerIds array-contains
-      if (currentFarmerId) {
-        const orderQuery = query(collection(db, "orders"), where("farmerIds", "array-contains", currentFarmerId));
-        unsubscribeOrders = onSnapshot(orderQuery, (snapshot) => {
-          const orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-          setFarmerOrders(orders);
-        }, (err) => {
-          console.warn("Orders fetch failed or index building:", err);
-        });
-      }
+      // STRICT ISOLATION: Only query orders containing this farmer's produce
+      const orderQuery = query(
+        collection(db, "orders"), 
+        where("farmerIds", "array-contains", currentFarmerId)
+      );
+
+      unsubscribeOrders = onSnapshot(orderQuery, (snapshot) => {
+        const orders = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        setFarmerOrders(orders);
+      }, (err) => {
+        console.warn("Orders fetch failed:", err);
+      });
 
     } catch (e) {
-      console.warn("Error setting up listeners:", e);
+      console.warn("Error setting up farmer listeners:", e);
+      setLoading(false);
     }
 
     return () => {
@@ -95,6 +94,11 @@ export default function FarmerDashboard({ onNavigate }) {
   // Handle List New Harvest submission
   const handleListHarvest = async (e) => {
     e.preventDefault();
+    if (!currentUser?.uid) {
+      setActionMessage({ type: 'error', text: 'You must be signed in as a farmer to list produce.' });
+      return;
+    }
+
     if (!cropName.trim() || !pricePerUnit || !quantity) {
       setActionMessage({ type: 'error', text: 'Please fill all required harvest fields.' });
       return;
@@ -109,9 +113,9 @@ export default function FarmerDashboard({ onNavigate }) {
     const randomBatch = `Batch #${cropName.substring(0, 2).toUpperCase()}-${new Date().getFullYear()}-${Math.floor(10 + Math.random() * 90)}`;
 
     const newProduct = {
-      farmerId: currentUser?.uid || "ramesh-patel-uid",
-      farmerName: userData?.name || "Ramesh Patel",
-      farmerLocation: userData?.location || "Green Valley Farm, Nashik",
+      farmerId: currentUser.uid,
+      farmerName: userData?.name || "Verified Farmer",
+      farmerLocation: userData?.location || "Local Farm",
       cropName: cropName.trim(),
       category,
       pricePerUnit: priceNum,
@@ -133,9 +137,7 @@ export default function FarmerDashboard({ onNavigate }) {
       setQuantity('');
     } catch (err) {
       console.error("Error listing harvest:", err);
-      // Fallback local update if offline or keys pending
-      setListings(prev => [{ id: `local-${Date.now()}`, ...newProduct }, ...prev]);
-      setActionMessage({ type: 'success', text: `"${cropName}" listed in field inventory (Offline/Local preview)!` });
+      setActionMessage({ type: 'error', text: `Failed to publish harvest: ${err.message}` });
     } finally {
       setSubmitting(false);
     }
@@ -144,14 +146,12 @@ export default function FarmerDashboard({ onNavigate }) {
   // Delete product listing
   const handleDeleteProduct = async (id) => {
     try {
-      if (!id.startsWith('seed-') && !id.startsWith('local-')) {
-        await deleteDoc(doc(db, "products", id));
-      }
+      await deleteDoc(doc(db, "products", id));
       setListings(prev => prev.filter(item => item.id !== id));
       setActionMessage({ type: 'success', text: 'Listing removed from marketplace.' });
     } catch (err) {
       console.error("Delete error:", err);
-      setListings(prev => prev.filter(item => item.id !== id));
+      setActionMessage({ type: 'error', text: 'Could not delete listing. Permission denied or error occurred.' });
     }
   };
 

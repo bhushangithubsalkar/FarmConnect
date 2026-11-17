@@ -14,24 +14,29 @@ service cloud.firestore {
       return isAuthenticated() && getUserData().role == 'admin';
     }
 
-    // Users Collection
+    // 1. Users Collection: Users can ONLY read & update their own profile; Admins have full access
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow create: if isAuthenticated();
       allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
     }
 
-    // Products Collection
+    // 2. Products / Inventory Collection:
+    // Anyone can read active products (so customers can buy them in Marketplace).
+    // ONLY the specific farmer who owns the product can create, update, or delete it (or admin).
     match /products/{productId} {
       allow read: if true;
-      allow create, update, delete: if isAuthenticated() && (request.resource.data.farmerId == request.auth.uid || resource.data.farmerId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && (request.resource.data.farmerId == request.auth.uid || isAdmin());
+      allow update, delete: if isAuthenticated() && (resource.data.farmerId == request.auth.uid || isAdmin());
     }
 
-    // Orders Collection: Multi-vendor support with farmerIds array
+    // 3. Orders Collection (Multi-Vendor Isolation):
+    // Customers can read their own orders; Farmers can ONLY read/update orders where their ID is in `farmerIds`; Admins have full logistics control.
     match /orders/{orderId} {
-      allow read: if isAuthenticated() && (resource.data.customerId == request.auth.uid || resource.data.farmerIds.hasAny([request.auth.uid]) || isAdmin());
       allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (isAdmin() || resource.data.farmerIds.hasAny([request.auth.uid]));
+      allow read: if isAuthenticated() && (resource.data.customerId == request.auth.uid || resource.data.farmerIds.hasAny([request.auth.uid]) || isAdmin());
+      allow update: if isAuthenticated() && (resource.data.farmerIds.hasAny([request.auth.uid]) || isAdmin());
+      allow delete: if isAdmin();
     }
   }
-}
+}
