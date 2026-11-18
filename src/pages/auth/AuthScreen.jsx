@@ -142,7 +142,7 @@ export default function AuthScreen({ onNavigate }) {
           <span className="absolute top-2 right-2 h-2.5 w-2.5 bg-emerald-600 rounded-full"></span>
         </div>
         <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
-          Farm<span className="text-emerald-700">Connect</span>
+          Crop<span className="text-emerald-700">Connect</span>
         </h1>
         <p className="text-xs text-gray-500 mt-1">Direct from harvest to your home</p>
       </div>
@@ -345,7 +345,7 @@ export default function AuthScreen({ onNavigate }) {
           <div className="flex items-start gap-2 pt-1">
             <input type="checkbox" defaultChecked className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500" />
             <p className="text-[11px] text-gray-600 leading-tight">
-              I agree to FarmConnect <span className="text-emerald-700 underline cursor-pointer">Terms of Service</span> and the <span className="text-emerald-700 underline cursor-pointer">Fresh Quality Pledge</span>.
+              I agree to CropConnect <span className="text-emerald-700 underline cursor-pointer">Terms of Service</span> and the <span className="text-emerald-700 underline cursor-pointer">Fresh Quality Pledge</span>.
             </p>
           </div>
 
@@ -361,7 +361,7 @@ export default function AuthScreen({ onNavigate }) {
               </>
             ) : (
               <>
-                <span>{authMode === 'register' ? 'Register / Get Started' : 'Sign In to FarmConnect'}</span> →
+                <span>{authMode === 'register' ? 'Register / Get Started' : 'Sign In to CropConnect'}</span> →
               </>
             )}
           </button>
@@ -407,4 +407,4 @@ export default function AuthScreen({ onNavigate }) {
       </div>
     </div>
   );
-}
+}

@@ -13,7 +13,7 @@ function RoleRedirect() {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f4fbf7] flex items-center justify-center text-emerald-800 font-bold text-sm">
-        Loading FarmConnect...
+        Loading CropConnect...
       </div>
     );
   }

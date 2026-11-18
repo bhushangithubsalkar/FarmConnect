@@ -171,7 +171,7 @@ export default function FarmerDashboard({ onNavigate }) {
         <div className="flex items-center gap-3">
           <div className="bg-emerald-700 text-white p-2 rounded-xl"><Tractor className="h-5 w-5" /></div>
           <div>
-            <span className="font-bold text-gray-900 text-base">FarmConnect</span>
+            <span className="font-bold text-gray-900 text-base">CropConnect</span>
             <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md ml-2">FARMER PORTAL</span>
           </div>
         </div>
@@ -477,4 +477,4 @@ export default function FarmerDashboard({ onNavigate }) {
       </div>
     </div>
   );
-}
+}
